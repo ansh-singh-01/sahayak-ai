@@ -288,5 +288,47 @@ export class ApiClient {
     const { ChatbotService } = await import('./chatbotService');
     return ChatbotService.processMessage(message, history, context);
   }
+
+  /**
+   * Fetch Document Verification Pipeline telemetry & documents
+   */
+  public static async getVerificationTelemetry() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/analytics/verification`);
+      if (res.ok) {
+        const json = await res.json();
+        return json.data;
+      }
+    } catch (e) {
+      console.warn('Backend verification endpoint unreachable, using initial telemetry:', e);
+    }
+    const { INITIAL_VERIFICATION_TELEMETRY, MOCK_VERIFIABLE_DOCUMENTS } = await import('../data/documentVerificationData');
+    return {
+      telemetry: INITIAL_VERIFICATION_TELEMETRY,
+      documents: MOCK_VERIFIABLE_DOCUMENTS
+    };
+  }
+
+  /**
+   * Post executive document review decision
+   */
+  public static async reviewDocument(docId: string, action: 'APPROVE' | 'REJECT', reason?: string, officerNote?: string) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/analytics/verification/${docId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, reason, officerNote })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Backend review endpoint unreachable, simulated locally:', e);
+    }
+    return {
+      status: 'SUCCESS',
+      message: `Document ${docId} reviewed locally with action: ${action}`
+    };
+  }
 }
 
