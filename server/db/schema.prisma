@@ -1,0 +1,156 @@
+// Prisma Schema for SAHAYAK (SIH26092 - MoSJE)
+// Supports PostgreSQL (Production) and SQLite (Local Development)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // or "sqlite" for lightweight local evaluation
+  url      = env("DATABASE_URL")
+}
+
+enum MinistryAgency {
+  NSFDC
+  NBCFDC
+  NSKFDC
+}
+
+enum BeneficiaryCategory {
+  SC
+  OBC
+  SAFAI_KARAMCHARI
+  OPEN
+  ANY
+}
+
+enum ProjectPurpose {
+  SMALL_BUSINESS
+  AGRICULTURE
+  GREEN_BUSINESS
+  SANITATION_REHAB
+  WOMEN_MICROCREDIT
+  SKILL_TRAINING
+  EDUCATION
+  TRANSPORT_VEHICLE
+}
+
+enum PartnerType {
+  SCA
+  RRB
+  PSU_BANK
+  COOPERATIVE_BANK
+}
+
+model Scheme {
+  id                  String               @id @default(uuid())
+  code                String               @unique // e.g. NBCFDC-GLS-01
+  name                String
+  hindiName           String
+  agency              MinistryAgency
+  agencyFullName      String
+  targetCommunity     BeneficiaryCategory[]
+  description         String
+  hindiDescription    String
+  tagline             String
+  maxProjectCost      Float
+  maxLoanAmount       Float
+  subsidyPercentage   Float?
+  maxSubsidyAmount    Float?
+  maxTenureYears      Int
+  moratoriumMonths    Int
+  incomeCeiling       Float
+  genderRestriction   String?              // "FEMALE_ONLY" | "ALL"
+  officialPortalUrl   String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  interestSlabs       InterestSlab[]
+  rules               SchemeRule[]
+  applications        BeneficiaryApplication[]
+}
+
+model InterestSlab {
+  id          String   @id @default(uuid())
+  schemeId    String
+  minAmount   Float
+  maxAmount   Float
+  ratePercent Float
+  description String
+
+  scheme      Scheme   @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+}
+
+model SchemeRule {
+  id            String   @id @default(uuid())
+  schemeId      String
+  ruleId        String   // e.g. RULE-NBCFDC-CAT
+  field         String   // e.g. category, annualFamilyIncome
+  condition     String   // in, lte, gte, equals
+  expectedValue String   // JSON serialized value
+  explanation   String
+  weight        Int
+
+  scheme        Scheme   @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+}
+
+model ChannelPartner {
+  id                              String        @id @default(uuid())
+  name                            String
+  hindiName                       String
+  type                            PartnerType
+  typeLabel                       String
+  state                           String
+  district                        String
+  address                         String
+  pinCode                         String
+  lat                             Float
+  lng                             Float
+  contactPerson                   String
+  designation                     String
+  phone                           String
+  email                           String
+  workingHours                    String
+  acceptingNewApplications        Boolean       @default(true)
+  
+  // Reliability Metrics (PRD §21-24)
+  averageResponseTimeDays         Float         // e.g. 4.2
+  allocatedFundUtilizationPercent Float         // e.g. 64%
+  grievanceResolutionRate         Float         // e.g. 97%
+  activeApplicationQuota          Int           // Available quarterly slots
+  lastAuditDate                   DateTime
+
+  applications                    BeneficiaryApplication[]
+}
+
+model BeneficiaryApplication {
+  id                    String              @id @default(uuid())
+  slipReferenceId       String              @unique // e.g. SHK-849201
+  category              BeneficiaryCategory
+  gender                String
+  age                   Int
+  annualFamilyIncome    Float
+  district              String
+  state                 String
+  purpose               ProjectPurpose
+  projectCost           Float
+  loanAmountRequested   Float
+  status                String              @default("ROUTED") // ROUTED, SANCTIONED, DISBURSED
+  
+  matchedSchemeId       String?
+  matchedScheme         Scheme?             @relation(fields: [matchedSchemeId], references: [id])
+  
+  channelPartnerId      String?
+  channelPartner        ChannelPartner?     @relation(fields: [channelPartnerId], references: [id])
+
+  createdAt             DateTime            @default(now())
+}
+
+model DpdpConsentLog {
+  id               String   @id @default(uuid())
+  sessionToken     String   @unique
+  consentTimestamp DateTime @default(now())
+  purpose          String   // "WelfareSchemeMatching"
+  dataMinimization Boolean  @default(true)
+  status           String   @default("ACTIVE") // ACTIVE, PURGED
+}
