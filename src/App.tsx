@@ -352,7 +352,21 @@ export const App: React.FC = () => {
         )}
 
         {currentTab === 'admin' && (
-          <MinistryDashboard language={language} />
+          authUser?.role === 'MINISTRY' ? (
+            <MinistryDashboard language={language} />
+          ) : (
+            <LandingPage
+              language={language}
+              onStartWizard={() => setCurrentTab('wizard')}
+              onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
+              onSelectSchemeForCalculator={(sch) => {
+                setSelectedScheme(sch);
+                setCurrentTab('calculator');
+              }}
+              onSelectDemoProfile={handleSelectDemoProfile}
+              onNavigateToTab={(tab) => setCurrentTab(tab)}
+            />
+          )
         )}
 
         {currentTab === 'auth' && (

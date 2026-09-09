@@ -171,17 +171,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{t.checklistNav}</span>
             </button>
 
-            <button
-              onClick={() => setCurrentTab('admin')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-1.5 ${
-                currentTab === 'admin'
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              <span>{t.adminMode}</span>
-            </button>
+            {/* Ministry Admin Dashboard - Restricted strictly to authenticated Ministry officials */}
+            {authUser?.role === 'MINISTRY' && (
+              <button
+                onClick={() => setCurrentTab('admin')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-1.5 ${
+                  currentTab === 'admin'
+                    ? 'bg-slate-900 text-white font-semibold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span>{t.adminMode}</span>
+              </button>
+            )}
           </nav>
 
           {/* Right Action Buttons */}
