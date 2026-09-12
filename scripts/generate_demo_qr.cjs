@@ -42,7 +42,6 @@ async function main() {
   }
 
   const outPathPublic = path.join(publicDir, 'demo_beneficiary_qr.png');
-  const outPathArtifact = 'C:\\Users\\ASUS\\.gemini\\antigravity-ide\\brain\\9247b25e-8173-4390-bdb9-02df3db94efb\\demo_beneficiary_qr.png';
 
   // We encode the scanUrl (with ref fallback embedded) so that:
   // 1. Any camera phone scanning the QR opens the direct scan link
@@ -60,13 +59,6 @@ async function main() {
 
   await QRCode.toFile(outPathPublic, scanUrl, qrOptions);
   console.log(`Saved demo QR to: ${outPathPublic}`);
-
-  try {
-    await QRCode.toFile(outPathArtifact, scanUrl, qrOptions);
-    console.log(`Saved demo QR to artifact: ${outPathArtifact}`);
-  } catch (e) {
-    console.error('Artifact save error:', e.message);
-  }
 }
 
 main().catch(console.error);
