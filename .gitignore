@@ -132,3 +132,55 @@ $RECYCLE.BIN/
 *.tar.gz
 *.zip
 *.7z
+
+# ------------------------------------------------------------------------------
+# Python Bytecode, Caches & Virtual Environments
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# ------------------------------------------------------------------------------
+# Presentation, Slide & PDF Extraction Artifacts
+# ------------------------------------------------------------------------------
+extracted_template_images/
+template_slide_images/
+winning_pdf_images/
+
+# ------------------------------------------------------------------------------
+# Scratch, COM & Inspection Scripts
+# ------------------------------------------------------------------------------
+scripts/inspect_*.py
+scripts/test_*.ps1
+scripts/test_com.ps1
+
+# ------------------------------------------------------------------------------
+# Microsoft Office Temporary & Backup Files
+# ------------------------------------------------------------------------------
+~$*
+~$*.pptx
+~$*.docx
+~$*.xlsx
+*.pptx.bak
+
+# ------------------------------------------------------------------------------
+# Loose Test QR Passes & Unreleased Dossier Exports
+# ------------------------------------------------------------------------------
+hitanshi_chouhan_qr.png
+public/hitanshi_chouhan_qr.png
+
+# ------------------------------------------------------------------------------
+# Modern Editor, AI Workspace & Tool Caches
+# ------------------------------------------------------------------------------
+.cursor/
+.claude/
+*.code-workspace
+

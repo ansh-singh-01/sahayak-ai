@@ -217,7 +217,7 @@ export const DocumentVerificationPanel: React.FC<DocumentVerificationPanelProps>
             <div className="flex items-center space-x-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                PRD Add-On: Statutory Document Verification Pipeline
+                Statutory Document Verification Pipeline
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black font-sans mt-1 text-white">
@@ -372,7 +372,7 @@ export const DocumentVerificationPanel: React.FC<DocumentVerificationPanelProps>
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center space-x-2">
               <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span>{isHindi ? 'नियम-आधारित स्वचालित फ़्लैग ट्रिगर्स' : 'Deterministic Fraud & Anomaly Sentinel (PRD §6)'}</span>
+              <span>{isHindi ? 'नियम-आधारित स्वचालित फ़्लैग ट्रिगर्स' : 'Deterministic Fraud & Anomaly Sentinel'}</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Click any flag trigger to filter the live queue below and inspect affected cases.

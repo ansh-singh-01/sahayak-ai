@@ -1,3 +1,5 @@
+import { getBestVoice } from '../lib/accessibility/speak';
+
 // Web Speech API interfaces for TypeScript
 declare global {
   interface Window {
@@ -32,9 +34,18 @@ export class VoiceService {
     try {
       this.synth.cancel(); // Stop any ongoing speech
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
       utterance.rate = 0.95;
       utterance.pitch = 1.0;
+
+      const voices = this.synth.getVoices();
+      const { voice: matchedVoice, resolvedLang } = getBestVoice(voices, lang);
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+        utterance.lang = matchedVoice.lang || resolvedLang;
+      } else {
+        utterance.lang = resolvedLang || lang;
+      }
+
       if (onEnd) {
         utterance.onend = onEnd;
         utterance.onerror = onEnd;

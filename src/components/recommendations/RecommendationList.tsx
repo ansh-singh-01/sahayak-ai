@@ -11,7 +11,8 @@ import {
   HelpCircle,
   Clock,
   Percent,
-  Coins
+  Coins,
+  Users
 } from 'lucide-react';
 import { SchemeRecommendation, EvaluationOutcome } from '../../types/recommendation';
 import { Scheme } from '../../types/scheme';
@@ -22,19 +23,25 @@ import { RuleAuditModal } from './RuleAuditModal';
 interface RecommendationListProps {
   evaluation: EvaluationOutcome;
   language: Language;
+  isAuthenticated?: boolean;
+  onNavigateToAuth?: () => void;
   onSelectSchemeForCalculator: (scheme: Scheme) => void;
   onSelectSchemeForPartners: (scheme: Scheme) => void;
   onSelectSchemeForChecklist: (scheme: Scheme) => void;
   onOpenAiExplainer: (rec: SchemeRecommendation) => void;
+  onSelectSchemeForFamilyLoan?: (scheme: Scheme) => void;
 }
 
 export const RecommendationList: React.FC<RecommendationListProps> = ({
   evaluation,
   language,
+  isAuthenticated = false,
+  onNavigateToAuth,
   onSelectSchemeForCalculator,
   onSelectSchemeForPartners,
   onSelectSchemeForChecklist,
-  onOpenAiExplainer
+  onOpenAiExplainer,
+  onSelectSchemeForFamilyLoan
 }) => {
   const t = TRANSLATIONS[language];
   const isHindi = language === 'hi';
@@ -205,10 +212,25 @@ export const RecommendationList: React.FC<RecommendationListProps> = ({
                       <span>{isHindi ? 'एआई सरल व्याख्या (Plain AI Explanation)' : 'AI Plain Explanation'}</span>
                     </button>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isAuthenticated && (
+                        <button
+                          onClick={() => {
+                            if (onSelectSchemeForFamilyLoan) {
+                              onSelectSchemeForFamilyLoan(s);
+                            }
+                          }}
+                          className="px-3.5 py-2 text-xs font-bold text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-2xs active:scale-95"
+                          title="Take the Loan in a Family Member's Name"
+                        >
+                          <Users className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>{isHindi ? 'परिवार के नाम पर ऋण' : "Take in Family Member's Name"}</span>
+                        </button>
+                      )}
+
                       <button
                         onClick={() => onSelectSchemeForCalculator(s)}
-                        className="px-4 py-2 text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center space-x-1.5"
+                        className="px-4 py-2 text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center space-x-1.5 cursor-pointer"
                       >
                         <Calculator className="w-3.5 h-3.5 text-orange-600" />
                         <span>{t.calculateEmi}</span>
@@ -216,7 +238,7 @@ export const RecommendationList: React.FC<RecommendationListProps> = ({
 
                       <button
                         onClick={() => onSelectSchemeForPartners(s)}
-                        className="px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-md shadow-orange-600/20 transition flex items-center space-x-1.5"
+                        className="px-4 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-md shadow-orange-600/20 transition flex items-center space-x-1.5 cursor-pointer"
                       >
                         <MapPin className="w-3.5 h-3.5" />
                         <span>{t.routeToPartner}</span>
@@ -236,6 +258,8 @@ export const RecommendationList: React.FC<RecommendationListProps> = ({
       <GapToEligibilityCard
         nearMisses={nearMissSchemes}
         language={language}
+        isAuthenticated={isAuthenticated}
+        onNavigateToAuth={onNavigateToAuth}
         onViewAudit={(rec) => setSelectedAuditRec(rec)}
       />
 

@@ -6,7 +6,7 @@ import {
   EligibilityGap, 
   EvaluationOutcome 
 } from '../types/recommendation';
-import { REAL_MOSJE_SCHEMES } from '../data/schemesData';
+import { SchemeRegistryService } from './schemeRegistry';
 
 export class EligibilityEngine {
   /**
@@ -20,9 +20,14 @@ export class EligibilityEngine {
       case 'category':
         userVal = profile.category;
         if (rule.condition === 'in') {
+          const isCategoryMatch = (expected: string, userCat: string) => {
+            if (expected === userCat) return true;
+            if ((expected === 'SC' || expected === 'ST') && (userCat === 'SC' || userCat === 'ST')) return true;
+            return false;
+          };
           passed = Array.isArray(rule.expectedValue) 
-            ? rule.expectedValue.includes(profile.category)
-            : rule.expectedValue === profile.category;
+            ? rule.expectedValue.some((exp: string) => isCategoryMatch(exp, profile.category))
+            : isCategoryMatch(rule.expectedValue, profile.category);
         }
         break;
 
@@ -168,7 +173,7 @@ export class EligibilityEngine {
   /**
    * Evaluates all schemes against user profile
    */
-  public static evaluateAllSchemes(profile: CitizenProfile, schemes: Scheme[] = REAL_MOSJE_SCHEMES): EvaluationOutcome {
+  public static evaluateAllSchemes(profile: CitizenProfile, schemes: Scheme[] = SchemeRegistryService.getAllSchemes()): EvaluationOutcome {
     const eligibleList: SchemeRecommendation[] = [];
     const nearMissList: SchemeRecommendation[] = [];
 
@@ -203,7 +208,9 @@ export class EligibilityEngine {
         }
 
         // 2. Category match
-        const catScore = scheme.targetCommunity.includes(profile.category) ? 30 : 0;
+        const isCatMatch = scheme.targetCommunity.includes(profile.category) ||
+          ((profile.category === 'SC' || profile.category === 'ST') && (scheme.targetCommunity.includes('SC') || scheme.targetCommunity.includes('ST')));
+        const catScore = isCatMatch ? 30 : 0;
         reasons.push(`Community eligibility verified: Meets ${profile.category} criteria under ${scheme.agency}`);
         hindiReasons.push(`समुदाय पात्रता: ${scheme.agency} अंतर्गत ${profile.category} वर्ग मापदंड पूर्ण`);
 

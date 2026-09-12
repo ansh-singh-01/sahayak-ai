@@ -42,11 +42,28 @@ const REGISTERED_USERS: AuthUser[] = [
     dpdpConsentTimestamp: new Date().toISOString()
   },
   {
+    id: 'USR-BANK-SBI-01',
+    name: 'Mr. Pradeep Joshi',
+    phone: '9826054321',
+    email: 'sme.indore@sbi.co.in',
+    role: 'PARTNER',
+    partnerType: 'PSU_BANK',
+    organizationName: 'State Bank of India',
+    state: 'Madhya Pradesh',
+    district: 'Indore',
+    designation: 'Chief Manager (Lead Bank Office)',
+    agency: 'State Bank of India — SME & Micro Credit Center',
+    token: 'TOKEN-BANK-SBI-01',
+    dpdpConsentTimestamp: new Date().toISOString()
+  },
+  {
     id: 'USR-SCA-INDORE-01',
     name: 'Rajesh Sharma',
     phone: '9826012345',
     email: 'nodal.indore@mp-scdc.gov.in',
     role: 'PARTNER',
+    partnerType: 'SCA',
+    organizationName: 'MP State SC/BC Development Corporation',
     state: 'Madhya Pradesh',
     district: 'Indore',
     designation: 'Senior District Nodal Officer',
@@ -179,7 +196,11 @@ authRouter.post('/login', (req: Request, res: Response) => {
     if (payload.role === 'MINISTRY') {
       user = REGISTERED_USERS.find(u => u.role === 'MINISTRY');
     } else if (payload.role === 'PARTNER') {
-      user = REGISTERED_USERS.find(u => u.role === 'PARTNER');
+      if (idLower.includes('sbi') || idLower.includes('bank')) {
+        user = REGISTERED_USERS.find(u => u.id === 'USR-BANK-SBI-01') || REGISTERED_USERS.find(u => u.role === 'PARTNER');
+      } else {
+        user = REGISTERED_USERS.find(u => u.role === 'PARTNER');
+      }
     } else {
       user = {
         id: `USR-${Date.now().toString(36).toUpperCase()}`,

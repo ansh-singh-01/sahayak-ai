@@ -23,7 +23,6 @@ import {
   Award,
   FileText,
   BadgeCheck,
-  Users,
   HelpCircle,
   ChevronRight,
   Check,
@@ -48,7 +47,7 @@ interface AuthPageProps {
   onLoginSuccess: (
     user: AuthUser, 
     demoProfile?: CitizenProfile,
-    targetTab?: 'landing' | 'dashboard' | 'wizard' | 'recommendations' | 'calculator' | 'partners' | 'checklist' | 'admin' | 'auth'
+    targetTab?: 'landing' | 'dashboard' | 'wizard' | 'recommendations' | 'calculator' | 'partners' | 'checklist' | 'admin' | 'auth' | 'compare'
   ) => void;
   onNavigateHome: () => void;
   onOpenConsentModal: () => void;
@@ -87,7 +86,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [role, setRole] = useState<UserRole>('CITIZEN');
 
   // Sign In Form States
-  const [loginMethod, setLoginMethod] = useState<'otp' | 'password'>('otp');
   const [phone, setPhone] = useState<string>('9876543210');
   const [identifier, setIdentifier] = useState<string>('');
   const [password, setPassword] = useState<string>('••••••••');
@@ -95,6 +93,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [otpSent, setOtpSent] = useState<boolean>(false);
   const [enteredOtp, setEnteredOtp] = useState<string>('');
   const [simulatedOtp, setSimulatedOtp] = useState<string>('123456');
+  const [citizenLoginName, setCitizenLoginName] = useState<string>('');
 
   // Sign Up Form States
   const [signupName, setSignupName] = useState<string>('');
@@ -184,7 +183,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     const res = await ApiClient.verifyOtp(phone, codeToVerify);
     setIsLoading(false);
     if (res.status === 'SUCCESS' && res.data?.user) {
-      handleSuccessfulAuth(res.data.user);
+      const u = { ...res.data.user };
+      if (citizenLoginName.trim()) {
+        u.name = citizenLoginName.trim();
+      }
+      handleSuccessfulAuth(u);
     } else {
       setErrorMsg(res.message || (isHindi ? 'अमान्य ओटीपी कोड' : 'Invalid OTP code'));
     }
@@ -193,6 +196,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   // Centralized authentication routing
   const handleSuccessfulAuth = (user: AuthUser) => {
     if (user.role === 'CITIZEN') {
+      if (citizenLoginName.trim()) {
+        user.name = citizenLoginName.trim();
+      }
+      try {
+        if (user.phone && user.name) {
+          const stored = JSON.parse(localStorage.getItem('sahayak_registered_users') || '{}');
+          stored[user.phone] = { ...user };
+          localStorage.setItem('sahayak_registered_users', JSON.stringify(stored));
+        }
+      } catch (e) {}
       setAuthenticatedUser(user);
       setShowPostLoginOptions(true);
       // Immediately register active session with App state so Navbar displays user
@@ -219,6 +232,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     }
     setErrorMsg(null);
     setIsLoading(true);
+
     const res = await ApiClient.login({
       identifier: loginId,
       password,
@@ -296,11 +310,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   // POST-SIGN-IN ONBOARDING GATEWAY (TWO OPTIONS: COMPLETE ID vs FIND SCHEME)
   // =========================================================================
   if (showPostLoginOptions && authenticatedUser) {
-    const userName = authenticatedUser.name || (isHindi ? 'नागरिक लाभार्थी' : 'Citizen Beneficiary');
+    const userName = authenticatedUser.name || citizenLoginName.trim() || '';
     const userPhone = authenticatedUser.phone || phone;
 
     return (
-      <div className="max-w-4xl mx-auto py-6 sm:py-10 space-y-8 animate-in fade-in zoom-in-95 duration-300">
+      <div className="max-w-6xl mx-auto py-6 sm:py-10 space-y-8 animate-in fade-in zoom-in-95 duration-300">
         
         {/* Welcome & Authentication Confirmation Header */}
         <div className="text-center space-y-3">
@@ -310,7 +324,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           </div>
           
           <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight font-sans">
-            {isHindi ? `नमस्ते, ${userName}!` : `Welcome to SAHAYAK, ${userName}!`}
+            {userName 
+              ? (isHindi ? `नमस्ते, ${userName}!` : `Welcome to SAHAYAK, ${userName}!`)
+              : (isHindi ? `नमस्ते!` : `Welcome to SAHAYAK!`)}
           </h1>
           
           <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
@@ -321,14 +337,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         </div>
 
         {/* The Two Primary Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           
           {/* =============================================================== */}
           {/* OPTION 1: COMPLETE ID BY SUBMITTING DOCUMENTS                   */}
           {/* =============================================================== */}
           <div 
             onClick={() => onLoginSuccess(authenticatedUser, undefined, 'checklist')}
-            className="group relative bg-white rounded-3xl p-6 sm:p-8 border-2 border-emerald-200 hover:border-emerald-500 hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col justify-between"
+            className="group relative bg-white rounded-3xl p-6 sm:p-7 border-2 border-emerald-200 hover:border-emerald-500 hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col justify-between"
           >
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -337,22 +353,22 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 </span>
                 <span className="text-xs font-semibold text-emerald-700 flex items-center space-x-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>DigiLocker Verified</span>
+                  <span>DigiLocker</span>
                 </span>
               </div>
 
-              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-md">
-                <FileCheck2 className="w-7 h-7" />
+              <div className="w-13 h-13 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-md">
+                <FileCheck2 className="w-6 h-6" />
               </div>
 
               <div>
-                <h3 className="text-lg sm:text-xl font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                <h3 className="text-lg font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
                   {isHindi ? 'दस्तावेज़ जमा कर पहचान पूर्ण करें' : 'Complete ID by Submitting Documents'}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                   {isHindi
-                    ? 'आधार, जाति एवं आय प्रमाणपत्र जमा अथवा डिजिलॉकर से लिंक करके अपनी डिजिटल लाभार्थी आईडी पूर्ण करें, जिससे बैंक शाखा में प्राथमिकता प्राप्त हो।'
-                    : 'Submit or link your Aadhaar, Caste, and Income certificates directly or via DigiLocker to complete your official Beneficiary ID and avoid bank desk queues.'}
+                    ? 'आधार, जाति एवं आय प्रमाणपत्र जमा अथवा डिजिलॉकर से लिंक करके अपनी डिजिटल लाभार्थी आईडी पूर्ण करें।'
+                    : 'Submit or link your Aadhaar, Caste, and Income certificates directly or via DigiLocker to complete your verified Beneficiary ID.'}
                 </p>
               </div>
 
@@ -372,12 +388,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </ul>
             </div>
 
-            <div className="mt-8 pt-4 border-t border-emerald-100">
+            <div className="mt-6 pt-4 border-t border-emerald-100">
               <button 
                 type="button"
-                className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 group-hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center space-x-2 transition shadow-md shadow-emerald-600/20"
+                className="w-full py-3 px-4 rounded-xl bg-emerald-600 group-hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-emerald-600/20 cursor-pointer"
               >
-                <span>{isHindi ? 'दस्तावेज़ जमा कर आईडी पूर्ण करें →' : 'Complete ID by Submitting Documents →'}</span>
+                <span>{isHindi ? 'दस्तावेज़ जमा कर आईडी पूर्ण करें →' : 'Complete ID by Submitting Docs →'}</span>
               </button>
             </div>
           </div>
@@ -387,12 +403,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           {/* =============================================================== */}
           <div 
             onClick={() => onLoginSuccess(authenticatedUser, undefined, 'wizard')}
-            className="group relative bg-white rounded-3xl p-6 sm:p-8 border-2 border-orange-200 hover:border-orange-500 hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col justify-between"
+            className="group relative bg-white rounded-3xl p-6 sm:p-7 border-2 border-orange-200 hover:border-orange-500 hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col justify-between"
           >
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide uppercase bg-orange-50 text-orange-800 border border-orange-200">
-                  {isHindi ? 'विकल्प 2 · त्वरित पात्रता' : 'Option 2 · Quick Eligibility'}
+                  {isHindi ? 'विकल्प 2 · त्वरित पात्रता' : 'Option 2 · Quick Match'}
                 </span>
                 <span className="text-xs font-semibold text-orange-700 flex items-center space-x-1">
                   <Sparkles className="w-3.5 h-3.5 text-orange-600" />
@@ -400,18 +416,18 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 </span>
               </div>
 
-              <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-orange-600 group-hover:text-white transition-all duration-300 shadow-md">
-                <Sparkles className="w-7 h-7" />
+              <div className="w-13 h-13 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-orange-600 group-hover:text-white transition-all duration-300 shadow-md">
+                <Sparkles className="w-6 h-6" />
               </div>
 
               <div>
-                <h3 className="text-lg sm:text-xl font-black text-slate-900 group-hover:text-orange-700 transition-colors">
+                <h3 className="text-lg font-black text-slate-900 group-hover:text-orange-700 transition-colors">
                   {isHindi ? 'पहले मेरी योजना खोजें' : 'Go to Find My Scheme First'}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                   {isHindi
-                    ? 'अपने व्यापार, दुकान अथवा शिक्षा हेतु 4 सरल प्रश्नों के उत्तर देकर तुरंत पता लगाएं कि आप किन केंद्रीय योजनाओं व 4%–6% रियायती ऋण के पात्र हैं।'
-                    : 'Discover which central MoSJE schemes (NSFDC, NBCFDC, NSKFDC) offer the highest capital subsidy and lowest interest rates for your enterprise.'}
+                    ? 'अपने व्यापार, दुकान अथवा शिक्षा हेतु 4 सरल प्रश्नों के उत्तर देकर तुरंत पता लगाएं कि आप किन केंद्रीय योजनाओं के पात्र हैं।'
+                    : 'Discover which central MoSJE schemes offer the highest capital subsidy and lowest interest rates for your enterprise.'}
                 </p>
               </div>
 
@@ -431,12 +447,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </ul>
             </div>
 
-            <div className="mt-8 pt-4 border-t border-orange-100">
+            <div className="mt-6 pt-4 border-t border-orange-100">
               <button 
                 type="button"
-                className="w-full py-3.5 px-4 rounded-xl bg-orange-600 group-hover:bg-orange-700 text-white font-bold text-sm flex items-center justify-center space-x-2 transition shadow-md shadow-orange-600/20"
+                className="w-full py-3 px-4 rounded-xl bg-orange-600 group-hover:bg-orange-700 text-white font-bold text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-orange-600/20 cursor-pointer"
               >
-                <span>{isHindi ? 'पहले मेरी योजना खोजें →' : 'Go to Find My Scheme First →'}</span>
+                <span>{isHindi ? 'पहले मेरी योजना खोजें →' : 'Find My Scheme First →'}</span>
               </button>
             </div>
           </div>
@@ -607,7 +623,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">
                   {isHindi ? 'प्रवेश पोर्टल भूमिका चुनें:' : 'Select Portal Access Role:'}
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   
                   {/* Role 1: Citizen Beneficiary */}
                   <button
@@ -633,13 +649,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     </p>
                   </button>
 
-                  {/* Role 2: Channel Partner */}
+                  {/* Role 2: Bank & Channel Partner */}
                   <button
                     type="button"
                     onClick={() => {
                       setRole('PARTNER');
-                      setLoginMethod('password');
-                      setIdentifier('nodal.indore@mp-scdc.gov.in');
+                      setIdentifier('sme.indore@sbi.co.in');
                       setErrorMsg(null);
                     }}
                     className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between ${
@@ -652,10 +667,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${role === 'PARTNER' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
                         <Building2 className="w-4 h-4" />
                       </div>
-                      <span className="font-bold text-xs text-slate-900">{t.rolePartner}</span>
+                      <span className="font-bold text-xs text-slate-900">{isHindi ? 'बैंक एवं चैनल पार्टनर' : 'Bank & Channel Partner'}</span>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-snug">
-                      State Channelizing Agencies (SCAs) & Bank Desks
+                      Sponsoring Banks (SBI, RRBs) & State SCAs
                     </p>
                   </button>
 
@@ -664,7 +679,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     type="button"
                     onClick={() => {
                       setRole('MINISTRY');
-                      setLoginMethod('password');
                       setIdentifier('jointsec.credit@mosje.gov.in');
                       setErrorMsg(null);
                     }}
@@ -688,131 +702,71 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 </div>
               </div>
 
-              {/* CITIZEN LOGIN (OTP or Password) */}
+              {/* CITIZEN LOGIN (Direct Secure Mobile OTP Verification) */}
               {role === 'CITIZEN' && (
                 <div className="space-y-4">
-                  
-                  {/* Method toggle */}
-                  <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
-                    <span className="font-semibold text-slate-500">
-                      {loginMethod === 'otp' ? (isHindi ? 'ओटीपी सत्यापन विधि' : 'Mobile OTP Authentication') : (isHindi ? 'पासवर्ड विधि' : 'Password Login')}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLoginMethod(loginMethod === 'otp' ? 'password' : 'otp');
-                        setErrorMsg(null);
-                      }}
-                      className="font-bold text-orange-600 hover:text-orange-700 underline"
-                    >
-                      {loginMethod === 'otp' ? t.usePasswordLogin : t.useOtpLogin}
-                    </button>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {isHindi ? 'आपका नाम (आधार अनुसार)' : 'Your Full Name (as per Aadhaar)'}
+                    </label>
+                    <input
+                      type="text"
+                      value={citizenLoginName}
+                      onChange={(e) => setCitizenLoginName(e.target.value)}
+                      placeholder={isHindi ? 'अपना पूरा नाम दर्ज करें' : 'Enter your full name'}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
                   </div>
 
-                  {/* OTP METHOD */}
-                  {loginMethod === 'otp' && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                          {t.mobileNumber}
-                        </label>
-                        <div className="flex space-x-2">
-                          <div className="relative flex-1">
-                            <span className="absolute left-3.5 top-3 text-xs font-bold text-slate-400">+91</span>
-                            <input
-                              type="tel"
-                              value={phone}
-                              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  if (!otpSent && phone.length === 10 && !isLoading) {
-                                    handleSendOtp();
-                                  } else if (otpSent && enteredOtp.length === 6 && !isLoading) {
-                                    handleVerifyOtp(enteredOtp);
-                                  }
-                                }
-                              }}
-                              placeholder="9876543210"
-                              className="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleSendOtp}
-                            disabled={isLoading}
-                            className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition shadow-xs shrink-0 flex items-center space-x-1"
-                          >
-                            <Smartphone className="w-3.5 h-3.5" />
-                            <span>{isLoading ? '...' : (otpSent ? (isHindi ? 'पुनः भेजें' : 'Resend') : t.sendOtp)}</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* OTP Input Field using InputOtp (referencing input-otp-2) */}
-                      {otpSent && (
-                        <InputOtp
-                          value={enteredOtp}
-                          onChange={setEnteredOtp}
-                          phone={phone}
-                          onResend={handleSendOtp}
-                          onVerify={handleVerifyOtp}
-                          simulatedOtp={simulatedOtp}
-                          isVerifying={isLoading}
-                          language={language}
-                        />
-                      )}
-
-                    </div>
-                  )}
-
-                  {/* PASSWORD METHOD */}
-                  {loginMethod === 'password' && (
-                    <form onSubmit={handlePasswordLogin} className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                          {t.mobileOrEmail}
-                        </label>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {t.mobileNumber}
+                    </label>
+                    <div className="flex space-x-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-3.5 top-3 text-xs font-bold text-slate-400">+91</span>
                         <input
-                          type="text"
+                          type="tel"
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="9876543210 or ramesh.patel@example.in"
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (!otpSent && phone.length === 10 && !isLoading) {
+                                handleSendOtp();
+                              } else if (otpSent && enteredOtp.length === 6 && !isLoading) {
+                                handleVerifyOtp(enteredOtp);
+                              }
+                            }
+                          }}
+                          placeholder="9876543210"
+                          className="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
                         />
                       </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                          {t.password}
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showPassword ? 'text' : 'password'}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500 pr-10"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
-                          >
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={handleSendOtp}
                         disabled={isLoading}
-                        className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition shadow-sm flex items-center justify-center space-x-1.5"
+                        className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition shadow-xs shrink-0 flex items-center space-x-1 cursor-pointer"
                       >
-                        <span>{t.loginButton}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <Smartphone className="w-3.5 h-3.5" />
+                        <span>{isLoading ? '...' : (otpSent ? (isHindi ? 'पुनः भेजें' : 'Resend') : t.sendOtp)}</span>
                       </button>
-                    </form>
+                    </div>
+                  </div>
+
+                  {/* OTP Input Field using InputOtp (referencing input-otp-2) */}
+                  {otpSent && (
+                    <InputOtp
+                      value={enteredOtp}
+                      onChange={setEnteredOtp}
+                      phone={phone}
+                      onResend={handleSendOtp}
+                      onVerify={handleVerifyOtp}
+                      simulatedOtp={simulatedOtp}
+                      isVerifying={isLoading}
+                      language={language}
+                    />
                   )}
 
                 </div>
@@ -825,22 +779,71 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     <Building2 className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
                     <span>
                       {role === 'PARTNER'
-                        ? 'अधिकृत राज्य चैनललाइजिंग एजेंसी (SCA) एवं बैंक नोडल डेस्क लॉगिन। डेमो क्रेडेंशियल स्वतः भरे गए हैं।'
+                        ? (isHindi 
+                            ? 'अधिकृत बैंक पार्टनर (SBI, RRB) एवं राज्य SCA नोडल डेस्क लॉगिन। डेमो क्रेडेंशियल नीचे दिए गए हैं।'
+                            : 'Authorized Sponsoring Bank Partner (SBI, RRBs) & State SCA Nodal Desk single sign-on.')
                         : 'सामाजिक न्याय एवं अधिकारिता मंत्रालय (MoSJE) आधिकारिक नेशनल एडमिन कंसोल।'}
                     </span>
                   </div>
 
+                  {role === 'PARTNER' && (
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-bold text-slate-500 block">
+                        {isHindi ? 'त्वरित डेमो क्रेडेंशियल चुनें:' : 'Select Demo Partner Profile:'}
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIdentifier('sme.indore@sbi.co.in');
+                            setPassword('••••••••');
+                          }}
+                          className={`px-3 py-2 rounded-xl text-left border text-xs transition flex items-center space-x-2 cursor-pointer ${
+                            identifier.includes('sbi')
+                              ? 'border-blue-500 bg-blue-50 text-blue-900 font-bold ring-2 ring-blue-200 shadow-xs'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Landmark className="w-4 h-4 text-blue-600 shrink-0" />
+                          <div className="truncate">
+                            <span className="block font-bold truncate">SBI Lead Bank</span>
+                            <span className="text-[10px] text-slate-500 block truncate">Bank Partner Desk</span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIdentifier('nodal.indore@mp-scdc.gov.in');
+                            setPassword('••••••••');
+                          }}
+                          className={`px-3 py-2 rounded-xl text-left border text-xs transition flex items-center space-x-2 cursor-pointer ${
+                            identifier.includes('scdc')
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-900 font-bold ring-2 ring-indigo-200 shadow-xs'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                          <div className="truncate">
+                            <span className="block font-bold truncate">MP SC/BC Corp</span>
+                            <span className="text-[10px] text-slate-500 block truncate">State SCA Desk</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       {role === 'PARTNER' 
-                        ? (isHindi ? 'अधिकारी ईमेल / कर्मचारी आईडी' : 'Official Nodal Officer Email / ID')
+                        ? (isHindi ? 'बैंक / SCA अधिकारी ईमेल या आईडी' : 'Bank Partner / SCA Official Email or ID')
                         : (isHindi ? 'मंत्रालय ईमेल / एसएसओ आईडी' : 'MoSJE Official Email / Govt SSO ID')}
                     </label>
                     <input
                       type="text"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder={role === 'PARTNER' ? 'nodal.indore@mp-scdc.gov.in' : 'jointsec.credit@mosje.gov.in'}
+                      placeholder={role === 'PARTNER' ? 'sme.indore@sbi.co.in' : 'jointsec.credit@mosje.gov.in'}
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
@@ -871,10 +874,17 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     type="submit"
                     disabled={isLoading}
                     className={`w-full py-3 text-white font-bold text-xs rounded-xl transition shadow-sm flex items-center justify-center space-x-1.5 ${
-                      role === 'PARTNER' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                      role === 'PARTNER' 
+                        ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' 
+                        : 'bg-emerald-600 hover:bg-emerald-700'
                     }`}
                   >
-                    <span>{role === 'PARTNER' ? 'Sign In as Channel Partner (SCA)' : 'Sign In to Ministry Executive Portal'}</span>
+                    <span>
+                      {role === 'PARTNER' && (identifier.includes('sbi') || identifier.includes('bank')
+                        ? 'Sign In as Sponsoring Bank Partner (SBI)' 
+                        : 'Sign In as Bank / Channel Partner')}
+                      {role === 'MINISTRY' && 'Sign In to Ministry Executive Portal'}
+                    </span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </form>

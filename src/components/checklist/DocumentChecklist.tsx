@@ -19,7 +19,8 @@ import {
   Download, 
   QrCode,
   Lock,
-  ExternalLink
+  ExternalLink,
+  Users
 } from 'lucide-react';
 import { Scheme } from '../../types/scheme';
 import { REAL_MOSJE_SCHEMES } from '../../data/schemesData';
@@ -27,6 +28,7 @@ import { CitizenSlip } from './CitizenSlip';
 import { CitizenProfile } from '../../types/user';
 import { RankedPartner } from '../../types/partner';
 import { Language, TRANSLATIONS } from '../../services/i18nService';
+import { AuthUser } from '../../types/auth';
 
 export type MandatoryDocType = 'aadhar' | 'caste' | 'income';
 
@@ -46,7 +48,9 @@ interface DocumentChecklistProps {
   selectedScheme: Scheme | null;
   selectedPartner: RankedPartner | null;
   language: Language;
-  onNavigateToTab?: (tab: 'landing' | 'dashboard' | 'wizard' | 'recommendations' | 'calculator' | 'partners' | 'checklist' | 'admin' | 'auth') => void;
+  onNavigateToTab?: (tab: 'landing' | 'dashboard' | 'wizard' | 'recommendations' | 'calculator' | 'partners' | 'checklist' | 'admin' | 'auth' | 'compare') => void;
+  isAuthenticated?: boolean;
+  authUser?: AuthUser | null;
 }
 
 export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
@@ -54,7 +58,9 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
   selectedScheme,
   selectedPartner,
   language,
-  onNavigateToTab
+  onNavigateToTab,
+  isAuthenticated = false,
+  authUser
 }) => {
   const t = TRANSLATIONS[language];
   const isHindi = language === 'hi';
@@ -269,13 +275,7 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
       {/* Top Navigation & View Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              {isHindi ? 'चरण 2: डिजिटल पहचान सत्यापन' : 'Stage 2: Digital Identity Verification'}
-            </span>
-          </div>
-          <h2 className="text-2xl font-extrabold text-slate-900 font-sans mt-1">
+          <h2 className="text-2xl font-extrabold text-slate-900 font-sans">
             {isHindi ? 'दस्तावेज़ सत्यापन एवं आईडी पूर्णता' : 'Document Verification & ID Completion'}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
@@ -315,10 +315,49 @@ export const DocumentChecklist: React.FC<DocumentChecklistProps> = ({
           scheme={scheme}
           partner={selectedPartner}
           language={language}
+          authUser={authUser}
         />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           
+          {/* Family Member Loan Option Callout on Selected Scheme (DISPLAYED ONLY AFTER SIGN IN) */}
+          {isAuthenticated && (
+            <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 text-white rounded-3xl p-5 border border-indigo-500/30 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 flex items-center justify-center shrink-0 mt-0.5">
+                  <Users className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/30">
+                      {isHindi ? 'परिवार ऋण विकल्प' : 'Alternative Strategy'}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-400">
+                      {isHindi ? '3.5%–4.0% रियायती दर' : '3.5%–4.0% Concessional Rate'}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-black text-white">
+                    {isHindi ? 'परिवार के सदस्य के नाम पर ऋण लें' : "Take the Loan in a Family Member's Name"}
+                  </h4>
+                  <p className="text-xs text-indigo-200/90 leading-relaxed max-w-xl">
+                    {isHindi 
+                      ? `चयनित योजना "${scheme.name}" के स्थान पर क्या आप माता, पत्नी या छात्र संतान के नाम पर आवेदन करना चाहते हैं?`
+                      : `Selected Scheme: "${scheme.name}". Want to lower interest by applying in your Mother's, Wife's, or Student Child's name instead?`}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onNavigateToTab?.('compare')}
+                className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center space-x-1.5 shrink-0 cursor-pointer active:scale-95"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>{isHindi ? 'परिवार ऋण विकल्प देखें →' : "Family Loan Options →"}</span>
+              </button>
+            </div>
+          )}
+
           {/* Readiness Gauge Banner */}
           <div className="bg-gradient-to-br from-white via-slate-50 to-orange-50/40 rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="space-y-1.5 text-center sm:text-left">

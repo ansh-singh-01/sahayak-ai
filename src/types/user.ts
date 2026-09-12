@@ -16,6 +16,27 @@ export interface CitizenProfile {
   loanAmountRequested: number; // in INR
   preferredTenureYears?: number;
   consentGiven: boolean;
+  householdId?: string;
+}
+
+export interface HouseholdMember {
+  id: string;
+  name: string;
+  relation: 'Self' | 'Mother' | 'Father' | 'Spouse' | 'Son' | 'Daughter' | 'Sibling';
+  age: number;
+  gender: Gender;
+  category: BeneficiaryCategory;
+  annualIncome: number;
+  purpose: ProjectPurpose | string;
+  loanAmountRequested: number;
+  matchedSchemeName: string;
+  matchedSchemeCode: string;
+  matchedAgency: 'NSFDC' | 'NBCFDC' | 'NSKFDC';
+  matchedInterestRate: string;
+  matchedMaxLoan: string;
+  matchScore: number;
+  highlightTag: string;
+  stage: 'ELIGIBLE' | 'DOCUMENTS_READY' | 'SANCTIONED';
 }
 
 export interface DemoProfile {
@@ -25,3 +46,4 @@ export interface DemoProfile {
   tagline: string;
   profile: CitizenProfile;
 }
+

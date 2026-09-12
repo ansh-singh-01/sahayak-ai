@@ -29,7 +29,7 @@ export const MinistryDashboard: React.FC<MinistryDashboardProps> = ({ language }
   const t = TRANSLATIONS[language];
   const isHindi = language === 'hi';
 
-  const [activeSubTab, setActiveSubTab] = useState<'verification' | 'analytics' | 'dpdp'>('verification');
+  const [activeSubTab, setActiveSubTab] = useState<'verification' | 'analytics' | 'escalation' | 'dpdp'>('verification');
   const [selectedState, setSelectedState] = useState<string>('Madhya Pradesh');
 
   // Realistic Equity & Inclusion Data for MoSJE (PRD §33)
@@ -40,7 +40,9 @@ export const MinistryDashboard: React.FC<MinistryDashboardProps> = ({ language }
     safaiShare: 10.4, // 10.4% Safai Karamchari & Dependents
     womenEntrepreneurs: 46.8, // 46.8% Women
     divyangjan: 7.2, // 7.2% Differently Abled
-    avgProcessingTat: 4.6 // Days
+    avgProcessingTat: 4.6, // Days
+    totalEscalations: 142,
+    resolvedEscalations: 130
   };
 
   // Funnel Data
@@ -49,8 +51,47 @@ export const MinistryDashboard: React.FC<MinistryDashboardProps> = ({ language }
     { label: isHindi ? 'योजना मिलान (Matched)' : 'Recommendations Viewed', count: 16200, dropoff: '87.8%' },
     { label: isHindi ? 'ईएमआई मॉडलिंग (Calculator)' : 'Loan Modeler Run', count: 14890, dropoff: '80.7%' },
     { label: isHindi ? 'चैनल पार्टनर चयन (SCA)' : 'Partner Located', count: 13910, dropoff: '75.4%' },
-    { label: isHindi ? 'रूटिंग पर्ची जनरेट (Slip)' : 'Routing Slip Downloaded', count: 12480, dropoff: '67.6%' }
+    { label: isHindi ? 'रूटिंग पर्ची जनरेट (Slip)' : 'Routing Slip Downloaded', count: 12480, dropoff: '67.6%' },
+    { label: isHindi ? 'शिकायत निवारण (Escalated)' : 'Escalated to Support Officer', count: 142, dropoff: '1.1%' }
   ];
+
+  // Seed Escalated Cases for Institutional Oversight (USP 3)
+  const [escalatedCases, setEscalatedCases] = useState([
+    {
+      id: 'ESC-2026-9041',
+      beneficiary: 'Ramesh Kumar',
+      category: 'OBC',
+      scheme: 'NBCFDC General Term Loan',
+      partner: 'M.P. Backward Classes Dev Corp (Indore)',
+      stalledDays: 12,
+      slaLimit: 7,
+      status: 'UNDER_INVESTIGATION',
+      supportOfficer: 'R.K. Sharma (Dist. Officer)'
+    },
+    {
+      id: 'ESC-2026-8812',
+      beneficiary: 'Kavita Solanki',
+      category: 'SC',
+      scheme: 'Mahila Samriddhi Yojana (NSFDC)',
+      partner: 'M.P. State SC Dev Corp (Ujjain)',
+      stalledDays: 14,
+      slaLimit: 7,
+      status: 'DIRECT_ORDER_ISSUED',
+      supportOfficer: 'P. Verma (Nodal Officer)'
+    },
+    {
+      id: 'ESC-2026-8790',
+      beneficiary: 'Mukesh Valmiki',
+      category: 'Safai Karamchari',
+      scheme: 'Sanitation Equipment Scheme (NSKFDC)',
+      partner: 'Central Bank of India (Bhopal)',
+      stalledDays: 11,
+      slaLimit: 7,
+      status: 'RESOLVED',
+      supportOfficer: 'A. Gupta (Dist. Officer)'
+    }
+  ]);
+
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -99,7 +140,7 @@ export const MinistryDashboard: React.FC<MinistryDashboardProps> = ({ language }
           }`}
         >
           <FileCheck2 className="w-4 h-4" />
-          <span>{isHindi ? 'दस्तावेज़ सत्यापन पाइपलाइन (PRD §4-8)' : 'Document Verification Pipeline (PRD)'}</span>
+          <span>{isHindi ? 'दस्तावेज़ सत्यापन पाइपलाइन' : 'Document Verification Pipeline'}</span>
           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
             activeSubTab === 'verification' ? 'bg-orange-700 text-white' : 'bg-emerald-100 text-emerald-800'
           }`}>
@@ -122,6 +163,24 @@ export const MinistryDashboard: React.FC<MinistryDashboardProps> = ({ language }
 
         <button
           type="button"
+          onClick={() => setActiveSubTab('escalation')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center space-x-2 shrink-0 cursor-pointer ${
+            activeSubTab === 'escalation'
+              ? 'bg-orange-600 text-white shadow-md shadow-orange-500/20'
+              : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+          }`}
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
+          <span>{isHindi ? 'शिकायत निवारण एवं एसएलए सेल (USP 3)' : 'Grievance Escalation & SLA Cell (USP 3)'}</span>
+          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+            activeSubTab === 'escalation' ? 'bg-orange-700 text-white' : 'bg-rose-100 text-rose-800'
+          }`}>
+            142
+          </span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveSubTab('dpdp')}
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center space-x-2 shrink-0 cursor-pointer ${
             activeSubTab === 'dpdp'
@@ -133,6 +192,7 @@ export const MinistryDashboard: React.FC<MinistryDashboardProps> = ({ language }
           <span>{isHindi ? 'DPDP अधिनियम 2023 अनुपालन' : 'DPDP Act 2023 Statutory Compliance'}</span>
         </button>
       </div>
+
 
       {/* ========================================================================= */}
       {/* TAB 1: DOCUMENT VERIFICATION PIPELINE (PRD §4, §5, §6, §7, §8)             */}
@@ -331,7 +391,142 @@ export const MinistryDashboard: React.FC<MinistryDashboardProps> = ({ language }
         </div>
       )}
 
+      {/* ========================================================================= */}
+      {/* TAB 4: INSTITUTIONAL GRIEVANCE & SLA ESCALATION CELL (USP 3)              */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'escalation' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          
+          {/* Header Card */}
+          <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent p-6 rounded-3xl border-2 border-amber-300 space-y-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-950 uppercase tracking-wider">
+                {isHindi ? 'यूएसपी 3 · संस्थागत जवाबदेही सेल' : 'USP 3 · Institutional Accountability Command'}
+              </span>
+              <span className="text-xs text-slate-500 font-semibold">
+                MoSJE Support Officer Queue
+              </span>
+            </div>
+            <h3 className="text-xl font-black text-slate-900">
+              {isHindi ? 'विलंबित आवेदन शिकायत निवारण एवं भागीदार एसएलए निगरानी' : 'Stalled Applications Grievance Escalation & Partner SLA Cell'}
+            </h3>
+            <p className="text-xs text-slate-600 max-w-3xl leading-relaxed">
+              {isHindi
+                ? 'जब कोई आवेदन 1.5× एसएलए सीमा (7 दिन से अधिक) पार करता है, तो नागरिक को स्वतः शिकायत अग्रेषित करने का विकल्प मिलता है। यह सेल सहायता अधिकारियों को सीधे भागीदार निगमों (SCA) पर प्रशासनिक निर्देश जारी करने का अधिकार देता है।'
+                : 'When an application stalls beyond 1.5× expected review time (>7 days), citizens can auto-escalate directly to district Support Officers. This dashboard closes the accountability loop by exposing unblocking actions and penalty tracking.'}
+            </p>
+          </div>
+
+          {/* Quick Metrics Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-1">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Total Escalated Cases</span>
+              <strong className="text-2xl font-black text-slate-900 font-sans">{demographicStats.totalEscalations}</strong>
+              <span className="text-[10px] text-slate-500 block">Across 52 MP Districts</span>
+            </div>
+
+            <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-1">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Resolved Under 48h SLA</span>
+              <strong className="text-2xl font-black text-emerald-600 font-sans">
+                {((demographicStats.resolvedEscalations / demographicStats.totalEscalations) * 100).toFixed(1)}%
+              </strong>
+              <span className="text-[10px] text-emerald-700 font-bold block">130 Cases Resolved</span>
+            </div>
+
+            <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-1">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Average Resolution TAT</span>
+              <strong className="text-2xl font-black text-blue-600 font-sans">26.4 <span className="text-xs font-normal">Hrs</span></strong>
+              <span className="text-[10px] text-blue-700 font-bold block">SLA Target: &lt; 48 Hrs</span>
+            </div>
+
+            <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-1">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Partner Warning Notices</span>
+              <strong className="text-2xl font-black text-rose-600 font-sans">3 SCAs</strong>
+              <span className="text-[10px] text-rose-700 font-bold block">Quota Penalties Enforced</span>
+            </div>
+          </div>
+
+          {/* Live Support Officer Action Queue */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h4 className="text-base font-extrabold text-slate-900">
+                  {isHindi ? 'सक्रिय शिकायत निवारण कतार' : 'Active Escalated Grievance Queue'}
+                </h4>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  Live MoSJE Regional Officer Worklist
+                </span>
+              </div>
+              <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                12 Active Pending Review
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 text-[10px] uppercase tracking-wider font-bold text-slate-400 bg-slate-50/50">
+                    <th className="py-2.5 px-3">Ticket ID</th>
+                    <th className="py-2.5 px-3">Beneficiary</th>
+                    <th className="py-2.5 px-3">Scheme</th>
+                    <th className="py-2.5 px-3">Partner Desk</th>
+                    <th className="py-2.5 px-3">Stalled Days</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3 text-right">Support Officer Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {escalatedCases.map((c) => (
+                    <tr key={c.id} className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-3 font-mono font-bold text-slate-800">{c.id}</td>
+                      <td className="py-3 px-3">
+                        <strong className="text-slate-900 block">{c.beneficiary}</strong>
+                        <span className="text-[10px] text-slate-500">{c.category}</span>
+                      </td>
+                      <td className="py-3 px-3 max-w-[180px] truncate text-slate-700">{c.scheme}</td>
+                      <td className="py-3 px-3 text-slate-600 max-w-[180px] truncate">{c.partner}</td>
+                      <td className="py-3 px-3 font-bold text-rose-600">
+                        {c.stalledDays}d <span className="text-[10px] text-slate-400 font-normal">(&gt;{c.slaLimit}d SLA)</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          c.status === 'RESOLVED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : c.status === 'DIRECT_ORDER_ISSUED'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {c.status.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right space-x-1.5">
+                        {c.status !== 'RESOLVED' ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEscalatedCases(prev => prev.map(item => item.id === c.id ? { ...item, status: 'RESOLVED' } : item));
+                              alert(`Order Enforced: Application ${c.id} expedited and resolved via Direct Administrative Notice.`);
+                            }}
+                            className="px-3 py-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] transition shadow-2xs cursor-pointer"
+                          >
+                            Enforce Immediate Review
+                          </button>
+                        ) : (
+                          <span className="text-[10px] font-bold text-emerald-700">✔ Expedited to Sanction</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      )}
+
     </div>
   );
 };
+
 

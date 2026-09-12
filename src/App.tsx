@@ -8,13 +8,20 @@ import { ConsentModal } from './components/onboarding/ConsentModal';
 import { RecommendationList } from './components/recommendations/RecommendationList';
 import { LoanCalculator } from './components/calculator/LoanCalculator';
 import { PartnerLocator } from './components/partners/PartnerLocator';
+import { ChannelProviderPortal } from './components/partners/ChannelProviderPortal';
 import { DocumentChecklist } from './components/checklist/DocumentChecklist';
 import { MinistryDashboard } from './components/analytics/MinistryDashboard';
+import { DocumentVerificationPanel } from './components/analytics/DocumentVerificationPanel';
 import { GroundedExplainer } from './components/ai/GroundedExplainer';
 import { LandingPage } from './components/landing/LandingPage';
 import { AuthPage } from './components/auth/AuthPage';
 import { BeneficiaryDashboard } from './components/beneficiary/BeneficiaryDashboard';
 import { SahayakChatbot } from './components/ai/SahayakChatbot';
+import { FieldAgentDashboard } from './components/agent/FieldAgentDashboard';
+import { WhatsAppChannelModal } from './components/onboarding/WhatsAppChannelModal';
+import { SchemeComparator } from './components/compare/SchemeComparator';
+import { RoutingSlipModal } from './components/checklist/RoutingSlipModal';
+import { PartnerDeskScannerModal } from './components/partners/PartnerDeskScannerModal';
 
 import { CitizenProfile } from './types/user';
 import { AuthUser } from './types/auth';
@@ -25,15 +32,11 @@ import { EligibilityEngine } from './services/eligibilityEngine';
 import { PartnerRouterService } from './services/partnerRouter';
 import { ApiClient } from './services/apiClient';
 import { DEMO_PROFILES } from './data/demoProfiles';
+import { REAL_MOSJE_SCHEMES } from './data/schemesData';
 import { Language } from './services/i18nService';
 import './i18n';
 
 export const App: React.FC = () => {
-  // Navigation State
-  const [currentTab, setCurrentTab] = useState<
-    'landing' | 'dashboard' | 'wizard' | 'recommendations' | 'calculator' | 'partners' | 'checklist' | 'admin' | 'auth'
-  >('landing');
-
   // Authentication State
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
     try {
@@ -42,6 +45,22 @@ export const App: React.FC = () => {
     } catch {
       return null;
     }
+  });
+
+  // Navigation State - dynamically defaulted based on authenticated authority role
+  const [currentTab, setCurrentTab] = useState<
+    'landing' | 'dashboard' | 'wizard' | 'recommendations' | 'calculator' | 'partners' | 'checklist' | 'admin' | 'auth' | 'compare'
+  >(() => {
+    try {
+      const saved = localStorage.getItem('sahayak_auth_user') || localStorage.getItem('mosje_auth_user');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u.role === 'MINISTRY') return 'admin';
+        if (u.role === 'PARTNER') return 'partners';
+        if (u.role === 'FIELD_AGENT') return 'dashboard';
+      }
+    } catch {}
+    return 'landing';
   });
 
   // Localization State (11 Pan-India Languages with persistent storage)
@@ -62,9 +81,9 @@ export const App: React.FC = () => {
     }
   };
 
-  // Active Citizen Profile (Autofilled from authenticated user or default demo)
+  // Active Citizen Profile (Autofilled from authenticated user or empty before sign-in)
   const [profile, setProfile] = useState<CitizenProfile>(() => {
-    const base = DEMO_PROFILES[0].profile;
+    const base = { ...DEMO_PROFILES[0].profile, name: '' };
     try {
       const savedAuth = localStorage.getItem('sahayak_auth_user') || localStorage.getItem('mosje_auth_user');
       if (savedAuth) {
@@ -72,7 +91,7 @@ export const App: React.FC = () => {
         if (u.role === 'CITIZEN') {
           return {
             ...base,
-            name: u.name || base.name,
+            name: u.name || '',
             category: (u.category as BeneficiaryCategory) || base.category,
             state: u.state || base.state,
             district: u.district || base.district,
@@ -89,14 +108,40 @@ export const App: React.FC = () => {
     if (authUser && authUser.role === 'CITIZEN') {
       setProfile(prev => ({
         ...prev,
-        name: authUser.name || prev.name,
+        name: authUser.name || '',
         category: (authUser.category as BeneficiaryCategory) || prev.category,
         state: authUser.state || prev.state,
         district: authUser.district || prev.district,
         consentGiven: true
       }));
+    } else if (!authUser) {
+      setProfile(prev => ({
+        ...prev,
+        name: ''
+      }));
     }
   }, [authUser]);
+
+  // Authority Route Guard: Ensure authorities only access role-specific portals and are never routed to citizen views
+  useEffect(() => {
+    if (!authUser) return;
+    if (authUser.role === 'MINISTRY') {
+      const allowedMinistryTabs = ['admin', 'partners'];
+      if (!allowedMinistryTabs.includes(currentTab)) {
+        setCurrentTab('admin');
+      }
+    } else if (authUser.role === 'PARTNER') {
+      const allowedPartnerTabs = ['partners', 'admin'];
+      if (!allowedPartnerTabs.includes(currentTab)) {
+        setCurrentTab('partners');
+      }
+    } else if (authUser.role === 'FIELD_AGENT') {
+      const allowedAgentTabs = ['dashboard', 'wizard', 'recommendations', 'partners'];
+      if (!allowedAgentTabs.includes(currentTab)) {
+        setCurrentTab('dashboard');
+      }
+    }
+  }, [authUser, currentTab]);
 
   // Evaluation Outcome from Deterministic Rule Engine
   const [evaluation, setEvaluation] = useState<EvaluationOutcome>(() => {
@@ -120,7 +165,24 @@ export const App: React.FC = () => {
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState<boolean>(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState<boolean>(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState<boolean>(false);
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState<boolean>(false);
+  const [assistedProxyMode, setAssistedProxyMode] = useState<boolean>(false);
   const [aiExplainerRec, setAiExplainerRec] = useState<SchemeRecommendation | null>(null);
+  const [isRoutingSlipModalOpen, setIsRoutingSlipModalOpen] = useState<boolean>(false);
+  const [isDeskScannerModalOpen, setIsDeskScannerModalOpen] = useState<boolean>(false);
+  const [deskScannerTargetRef, setDeskScannerTargetRef] = useState<string | null>(null);
+
+  // Auto-detect ?scanPass=... or ?routingSlip=... (when scanned by bank officer or camera phone)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const scanPass = params.get('scanPass') || params.get('routingSlip') || params.get('ref');
+      if (scanPass) {
+        setDeskScannerTargetRef(scanPass);
+        setIsDeskScannerModalOpen(true);
+      }
+    }
+  }, []);
 
   // Set default selected scheme from top match upon evaluation ONLY if needs are submitted
   useEffect(() => {
@@ -181,7 +243,7 @@ export const App: React.FC = () => {
   const handleLoginSuccess = (
     user: AuthUser, 
     demoProfile?: CitizenProfile,
-    targetTab?: 'landing' | 'dashboard' | 'wizard' | 'recommendations' | 'calculator' | 'partners' | 'checklist' | 'admin' | 'auth'
+    targetTab?: 'landing' | 'dashboard' | 'wizard' | 'recommendations' | 'calculator' | 'partners' | 'checklist' | 'admin' | 'auth' | 'compare'
   ) => {
     setAuthUser(user);
     try {
@@ -197,7 +259,7 @@ export const App: React.FC = () => {
     if (user.role === 'CITIZEN') {
       setProfile(prev => ({
         ...prev,
-        name: user.name || prev.name,
+        name: user.name || '',
         category: user.category || prev.category,
         state: user.state || prev.state,
         district: user.district || prev.district,
@@ -213,6 +275,8 @@ export const App: React.FC = () => {
       setCurrentTab('admin');
     } else if (user.role === 'PARTNER') {
       setCurrentTab('partners');
+    } else if (user.role === 'FIELD_AGENT') {
+      setCurrentTab('dashboard');
     } else {
       setCurrentTab('landing');
     }
@@ -222,19 +286,56 @@ export const App: React.FC = () => {
   const handleLogout = () => {
     setAuthUser(null);
     setHasSubmittedNeeds(false);
+    setDeskScannerTargetRef(null);
+    setIsDeskScannerModalOpen(false);
+    setIsRoutingSlipModalOpen(false);
     try {
       localStorage.removeItem('sahayak_auth_user');
       localStorage.removeItem('mosje_auth_user');
       localStorage.removeItem('sahayak_needs_submitted');
       localStorage.removeItem('sahayak_citizen_applications');
+      localStorage.removeItem('sahayak_active_routing_slip_id');
     } catch (e) {}
+
+    // Clean up any ?scanPass= or ?ref= params from URL
+    if (typeof window !== 'undefined' && window.history && window.location.search) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('scanPass');
+        url.searchParams.delete('routingSlip');
+        url.searchParams.delete('ref');
+        window.history.replaceState({}, document.title, url.pathname);
+      } catch (e) {}
+    }
+
     // Reset to clean default state without carrying over previous user PII
-    setProfile(DEMO_PROFILES[0].profile);
-    setEvaluation(EligibilityEngine.evaluateAllSchemes(DEMO_PROFILES[0].profile));
+    setProfile({ ...DEMO_PROFILES[0].profile, name: '' });
+    setEvaluation(EligibilityEngine.evaluateAllSchemes({ ...DEMO_PROFILES[0].profile, name: '' }));
     setSelectedScheme(null);
     setSelectedPartner(null);
     setCurrentTab('landing');
   };
+
+  // Check if running in external iframe / embed mode (?embed=true)
+  const isEmbedMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embed') === 'true';
+
+  if (isEmbedMode) {
+    return (
+      <div className="w-screen h-screen bg-slate-50 flex flex-col overflow-hidden">
+        <SahayakChatbot
+          isOpen={true}
+          onOpen={() => {}}
+          onClose={() => {}}
+          profile={profile}
+          selectedScheme={selectedScheme}
+          selectedPartner={selectedPartner}
+          language={language}
+          onSelectLanguage={handleSetLanguage}
+          onNavigateTab={(tab) => setCurrentTab(tab)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-orange-500 selection:text-white">
@@ -249,8 +350,10 @@ export const App: React.FC = () => {
         onOpenConsentModal={() => setIsConsentModalOpen(true)}
         onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
         onOpenChat={() => setIsChatbotOpen(true)}
+        onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
         authUser={authUser}
         onLogout={handleLogout}
+        onOpenRoutingSlip={() => setIsRoutingSlipModalOpen(true)}
       />
 
       {/* Main Container */}
@@ -271,22 +374,35 @@ export const App: React.FC = () => {
         )}
 
         {currentTab === 'dashboard' && (
-          <BeneficiaryDashboard
-            profile={profile}
-            setProfile={setProfile}
-            authUser={authUser}
-            evaluation={evaluation}
-            selectedScheme={selectedScheme}
-            selectedPartner={selectedPartner}
-            language={language}
-            setLanguage={handleSetLanguage}
-            onNavigateToTab={(tab) => setCurrentTab(tab)}
-            onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
-            onOpenConsentModal={() => setIsConsentModalOpen(true)}
-            onOpenChat={() => setIsChatbotOpen(true)}
-            onLogout={handleLogout}
-            hasSubmittedNeeds={hasSubmittedNeeds}
-          />
+          authUser?.role === 'FIELD_AGENT' ? (
+            <FieldAgentDashboard
+              authUser={authUser}
+              language={language}
+              onStartAssistedApplication={() => {
+                setAssistedProxyMode(true);
+                setCurrentTab('wizard');
+              }}
+            />
+          ) : (
+            <BeneficiaryDashboard
+              profile={profile}
+              setProfile={setProfile}
+              authUser={authUser}
+              evaluation={evaluation}
+              selectedScheme={selectedScheme}
+              selectedPartner={selectedPartner}
+              language={language}
+              setLanguage={handleSetLanguage}
+              onNavigateToTab={(tab) => setCurrentTab(tab)}
+              onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
+              onOpenConsentModal={() => setIsConsentModalOpen(true)}
+              onOpenChat={() => setIsChatbotOpen(true)}
+              onLogout={handleLogout}
+              hasSubmittedNeeds={hasSubmittedNeeds}
+              onSelectScheme={(sch) => setSelectedScheme(sch)}
+              onOpenRoutingSlip={() => setIsRoutingSlipModalOpen(true)}
+            />
+          )
         )}
 
         {currentTab === 'wizard' && (
@@ -297,6 +413,8 @@ export const App: React.FC = () => {
             onEvaluate={handleEvaluate}
             language={language}
             onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
+            initialProxyMode={assistedProxyMode || Boolean(authUser?.role === 'FIELD_AGENT')}
+            submittedByAgentId={authUser?.agentId || (authUser?.role === 'FIELD_AGENT' ? 'CSC-MP-IND-042' : undefined)}
           />
         )}
 
@@ -304,6 +422,8 @@ export const App: React.FC = () => {
           <RecommendationList
             evaluation={evaluation}
             language={language}
+            isAuthenticated={Boolean(authUser)}
+            onNavigateToAuth={() => setCurrentTab('auth')}
             onSelectSchemeForCalculator={(sch) => {
               setSelectedScheme(sch);
               setCurrentTab('calculator');
@@ -316,6 +436,14 @@ export const App: React.FC = () => {
               setSelectedScheme(sch);
               setCurrentTab('checklist');
             }}
+            onSelectSchemeForFamilyLoan={(sch) => {
+              setSelectedScheme(sch);
+              if (!authUser) {
+                setCurrentTab('auth');
+              } else {
+                setCurrentTab('compare');
+              }
+            }}
             onOpenAiExplainer={(rec) => setAiExplainerRec(rec)}
           />
         )}
@@ -324,12 +452,21 @@ export const App: React.FC = () => {
           <LoanCalculator
             selectedScheme={selectedScheme}
             onSelectScheme={(sch) => setSelectedScheme(sch)}
+            onNavigateToFamilyLoan={(sch) => {
+              setSelectedScheme(sch);
+              if (!authUser) {
+                setCurrentTab('auth');
+              } else {
+                setCurrentTab('compare');
+              }
+            }}
             language={language}
+            isAuthenticated={Boolean(authUser)}
           />
         )}
 
         {currentTab === 'partners' && (
-          <PartnerLocator
+          <ChannelProviderPortal
             userDistrict={profile.district}
             selectedScheme={selectedScheme}
             selectedPartner={selectedPartner}
@@ -337,7 +474,15 @@ export const App: React.FC = () => {
               setSelectedPartner(partner);
               setCurrentTab('checklist');
             }}
+            onSelectScheme={(sch) => setSelectedScheme(sch)}
+            onNavigateToTab={(tab) => setCurrentTab(tab)}
             language={language}
+            authUser={authUser}
+            onLoginSuccess={handleLoginSuccess}
+            onOpenDeskScanner={(refId) => {
+              setDeskScannerTargetRef(refId || null);
+              setIsDeskScannerModalOpen(true);
+            }}
           />
         )}
 
@@ -348,12 +493,73 @@ export const App: React.FC = () => {
             selectedPartner={selectedPartner}
             language={language}
             onNavigateToTab={(tab) => setCurrentTab(tab)}
+            isAuthenticated={Boolean(authUser)}
+            authUser={authUser}
+          />
+        )}
+
+        {currentTab === 'compare' && (
+          <SchemeComparator
+            language={language}
+            selectedScheme={selectedScheme}
+            onSelectScheme={(sch) => {
+              setSelectedScheme(sch);
+              // auto-select rank 1 partner
+              const bestPartner = PartnerRouterService.rankPartners(
+                22.7196,
+                75.8577,
+                sch.agency,
+                profile.district
+              )[0];
+              if (bestPartner) setSelectedPartner(bestPartner);
+            }}
+            onNavigateTab={(tab) => setCurrentTab(tab)}
+            profile={profile}
+            authUser={authUser}
           />
         )}
 
         {currentTab === 'admin' && (
           authUser?.role === 'MINISTRY' ? (
             <MinistryDashboard language={language} />
+          ) : authUser?.role === 'PARTNER' ? (
+            <div className="space-y-6">
+              {/* Partner Authority Document Verification Header */}
+              <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse"></span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                      Bank & Channel Partner Credit Desk · {authUser.name || 'Sponsoring Bank Partner'}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold font-sans mt-1">
+                    {language === 'hi' ? 'दस्तावेज़ सत्यापन एवं ऋण स्वीकृति कतार' : 'Loan Document Verification & Sanction Queue'}
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                    {language === 'hi'
+                      ? 'आवेदक के अपलोड किए गए दस्तावेजों की प्रामाणिकता की जांच करें, रजिस्ट्री मिलान देखें और डिजिटल हस्ताक्षर द्वारा ऋण स्वीकृति दें।'
+                      : 'Inspect applicant document authenticity against statutory registry feeds, verify optical audit checks, and issue bank-level sanction sign-offs.'}
+                  </p>
+                </div>
+
+                <div className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeskScannerTargetRef(null);
+                      setIsDeskScannerModalOpen(true);
+                    }}
+                    className="px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg shadow-emerald-600/30 transition flex items-center justify-center space-x-2 cursor-pointer transform hover:scale-[1.02]"
+                    title="Scan Citizen QR Slip for Instant Intake"
+                  >
+                    <span>📷</span>
+                    <span>{language === 'hi' ? 'नागरिक QR पर्ची स्कैन करें' : 'Scan Beneficiary QR Slip'}</span>
+                  </button>
+                </div>
+              </div>
+              <DocumentVerificationPanel language={language} />
+            </div>
           ) : (
             <LandingPage
               language={language}
@@ -415,17 +621,61 @@ export const App: React.FC = () => {
         language={language}
       />
 
-      {/* Grounded Multilingual Conversational AI Chatbot with Voice Typing (STT & TTS) */}
-      <SahayakChatbot
-        isOpen={isChatbotOpen}
-        onOpen={() => setIsChatbotOpen(true)}
-        onClose={() => setIsChatbotOpen(false)}
-        profile={profile}
+      {/* Grounded Multilingual Conversational AI Chatbot with Voice Typing (STT & TTS) - For Citizens and CSC Field Agents */}
+      {(!authUser || authUser.role === 'CITIZEN' || authUser.role === 'FIELD_AGENT') && (
+        <SahayakChatbot
+          isOpen={isChatbotOpen}
+          onOpen={() => setIsChatbotOpen(true)}
+          onClose={() => setIsChatbotOpen(false)}
+          profile={profile}
+          selectedScheme={selectedScheme}
+          selectedPartner={selectedPartner}
+          language={language}
+          onSelectLanguage={handleSetLanguage}
+          onNavigateTab={(tab) => setCurrentTab(tab)}
+        />
+      )}
+
+      {/* WhatsApp Channel & IVR Voice Channel Simulator Modal */}
+      <WhatsAppChannelModal
+        isOpen={isWhatsAppModalOpen}
+        onClose={() => setIsWhatsAppModalOpen(false)}
+        onSelectSchemeForWeb={(schemeId) => {
+          const matched = REAL_MOSJE_SCHEMES.find(s => s.id === schemeId);
+          if (matched) {
+            setSelectedScheme(matched);
+            setCurrentTab('checklist');
+          }
+        }}
         selectedScheme={selectedScheme}
         selectedPartner={selectedPartner}
+        profile={profile}
         language={language}
-        onSelectLanguage={handleSetLanguage}
         onNavigateTab={(tab) => setCurrentTab(tab)}
+        authUser={authUser}
+      />
+
+      {/* Official Citizen QR Routing Slip Modal */}
+      <RoutingSlipModal
+        isOpen={isRoutingSlipModalOpen}
+        onClose={() => setIsRoutingSlipModalOpen(false)}
+        profile={profile}
+        scheme={selectedScheme}
+        partner={selectedPartner}
+        language={language}
+        authUser={authUser}
+      />
+
+      {/* Partner & Bank Desk Instant QR Scanner Modal */}
+      <PartnerDeskScannerModal
+        isOpen={isDeskScannerModalOpen}
+        onClose={() => {
+          setIsDeskScannerModalOpen(false);
+          setDeskScannerTargetRef(null);
+        }}
+        initialRefId={deskScannerTargetRef}
+        language={language}
+        authUser={authUser}
       />
 
     </div>

@@ -244,7 +244,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {t.step2Desc}
             </p>
             <div className="pt-2 text-xs font-bold text-amber-600 flex items-center space-x-1">
-              <span>{isHindi ? 'निकटतम चूक अंतर विश्लेषण' : 'PRD §16 Gap-to-Eligibility'}</span>
+              <span>{isHindi ? 'निकटतम चूक अंतर विश्लेषण' : 'Gap-to-Eligibility Analysis'}</span>
               <CheckCircle2 className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -396,7 +396,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
-            PRD §2 Benchmarking
+            {isHindi ? 'रणनीतिक तुलना एवं श्रेष्ठता' : 'Strategic Benchmarking'}
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-sans">
             {t.comparisonHeading}

@@ -53,4 +53,10 @@ export interface Scheme {
   keyBenefits: string[];
   officialPortalUrl: string;
   tagline: string;
+  channelProviderName?: string;
+  channelProviderType?: 'SCA' | 'RRB' | 'PSU_BANK' | 'COOPERATIVE_BANK' | 'OTHER';
+  channelProviderDistrict?: string;
+  channelProviderState?: string;
+  isCustomChannelScheme?: boolean;
+  createdAt?: string;
 }

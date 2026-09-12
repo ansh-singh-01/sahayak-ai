@@ -1,18 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Calculator, 
-  Coins, 
   Percent, 
+  Calendar, 
   Clock, 
-  ShieldAlert, 
-  Sparkles, 
-  Info, 
-  ChevronRight,
-  HelpCircle,
-  Building2
+  HelpCircle, 
+  TrendingDown, 
+  ShieldAlert,
+  Users,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 import { Scheme } from '../../types/scheme';
-import { REAL_MOSJE_SCHEMES } from '../../data/schemesData';
+import { SchemeRegistryService } from '../../services/schemeRegistry';
 import { LoanCalculatorService } from '../../services/loanCalculator';
 import { CostBreakdownChart } from './CostBreakdownChart';
 import { AmortizationTable } from './AmortizationTable';
@@ -22,17 +22,30 @@ interface LoanCalculatorProps {
   selectedScheme: Scheme | null;
   onSelectScheme: (scheme: Scheme) => void;
   language: Language;
+  onNavigateToFamilyLoan?: (scheme: Scheme) => void;
+  isAuthenticated?: boolean;
 }
 
 export const LoanCalculator: React.FC<LoanCalculatorProps> = ({
   selectedScheme,
   onSelectScheme,
-  language
+  language,
+  onNavigateToFamilyLoan,
+  isAuthenticated = false
 }) => {
   const t = TRANSLATIONS[language];
   const isHindi = language === 'hi';
 
-  const activeScheme = selectedScheme || REAL_MOSJE_SCHEMES[6]; // default to NBCFDC GLS
+  const [availableSchemes, setAvailableSchemes] = useState<Scheme[]>(SchemeRegistryService.getAllSchemes());
+
+  React.useEffect(() => {
+    const unsubscribe = SchemeRegistryService.subscribe(() => {
+      setAvailableSchemes(SchemeRegistryService.getAllSchemes());
+    });
+    return unsubscribe;
+  }, []);
+
+  const activeScheme = selectedScheme || availableSchemes[0];
 
   const [loanAmount, setLoanAmount] = useState<number>(350000);
   const [tenureYears, setTenureYears] = useState<number>(5);
@@ -64,14 +77,9 @@ export const LoanCalculator: React.FC<LoanCalculatorProps> = ({
       
       {/* Header */}
       <div className="pb-4 border-b border-slate-200">
-        <div className="flex items-center space-x-2">
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-orange-100 text-orange-800 border border-orange-200">
-            {isHindi ? 'वित्तीय मॉडलर' : 'Financial Modeler'}
-          </span>
-          <h2 className="text-2xl font-extrabold text-slate-900 font-sans">
-            {t.calculatorTitle}
-          </h2>
-        </div>
+        <h2 className="text-2xl font-extrabold text-slate-900 font-sans">
+          {t.calculatorTitle}
+        </h2>
         <p className="text-xs text-slate-500 mt-1">
           {t.calculatorSubtitle}
         </p>
@@ -83,7 +91,7 @@ export const LoanCalculator: React.FC<LoanCalculatorProps> = ({
           {isHindi ? 'योजना चुनें (मॉडलिंग हेतु):' : 'Select Scheme for Official Interest Slabs:'}
         </label>
         <div className="flex items-center space-x-2 overflow-x-auto pb-2">
-          {REAL_MOSJE_SCHEMES.map((sch) => {
+          {availableSchemes.map((sch) => {
             const isSelected = sch.id === activeScheme.id;
             return (
               <button
@@ -106,6 +114,50 @@ export const LoanCalculator: React.FC<LoanCalculatorProps> = ({
           })}
         </div>
       </div>
+
+      {/* USP 1: TAKE THE LOAN IN A FAMILY MEMBER'S NAME (DISPLAYED ONLY AFTER SIGN IN) */}
+      {isAuthenticated && (
+        <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 text-white rounded-3xl p-5 sm:p-6 border border-indigo-500/30 shadow-lg relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+          <div className="relative z-10 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 flex items-center space-x-1">
+                <Sparkles className="w-3 h-3 text-indigo-400" />
+                <span>{isHindi ? 'ब्याज बचत अवसर' : 'Interest Rate Optimizer'}</span>
+              </span>
+              <span className="text-xs font-bold text-emerald-400">
+                {isHindi ? 'रियायती दर 3.5% – 4.0% p.a.' : 'Concessional 3.5% – 4.0% p.a.'}
+              </span>
+            </div>
+
+            <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
+              {isHindi ? 'परिवार के सदस्य के नाम पर ऋण लें' : "Take the Loan in a Family Member's Name"}
+            </h3>
+
+            <p className="text-xs text-indigo-200/90 leading-relaxed max-w-2xl">
+              {isHindi
+                ? `चयनित योजना "${isHindi ? activeScheme.hindiName : activeScheme.name}" के स्थान पर यदि आप माता, पत्नी या छात्र संतान के नाम पर आवेदन करते हैं तो न्यूनतम 3.5%–4.0% रियायती ब्याज व शून्य-गारंटी लाभ प्राप्त हो सकता है।`
+                : `Modeling for "${activeScheme.name}"? Taking the loan in your Mother's, Wife's, or Student Child's name can lower your interest rate to 3.5%–4.0% with zero-collateral and moratorium benefits.`}
+            </p>
+          </div>
+
+          <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                if (onNavigateToFamilyLoan) {
+                  onNavigateToFamilyLoan(activeScheme);
+                }
+              }}
+              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-500 via-blue-600 to-indigo-700 hover:from-indigo-600 hover:to-blue-800 text-white font-black text-xs shadow-lg shadow-indigo-600/30 transition flex items-center justify-center space-x-2 cursor-pointer transform hover:scale-[1.02] active:scale-95"
+            >
+              <Users className="w-4 h-4 text-white" />
+              <span>{isHindi ? 'परिवार ऋण विकल्प देखें →' : "Family Loan Options →"}</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Ceiling Advisory Warning if loan exceeds scheme cap */}
       {calcResult.hasCeilingWarning && (

@@ -27,6 +27,37 @@ export interface ApplicationTimelineEvent {
   officerRole?: string;
 }
 
+export interface RejectionDetails {
+  type: 'FIXABLE' | 'HARD_INELIGIBLE';
+  code: 'DOCUMENT_STALE' | 'NAME_MISMATCH' | 'INCOME_CEILING_EXCEEDED' | 'CATEGORY_MISMATCH' | 'INCOMPLETE_DPR';
+  title: string;
+  hindiTitle?: string;
+  reason: string;
+  hindiReason?: string;
+  ruleCitation: string;
+  resolutionStep: string;
+  hindiResolutionStep?: string;
+  actionableCta: string;
+  alternativeSchemes?: {
+    schemeName: string;
+    agency: MinistryAgency;
+    reason: string;
+  }[];
+}
+
+export interface ApplicationEscalation {
+  id: string;
+  ticketNumber: string; // e.g. ESC-2026-9041
+  raisedAt: string;
+  reason: string;
+  status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED';
+  assignedTo: string; // SUPPORT_OFFICER
+  officerContact?: string;
+  slaHoursRemaining: number;
+  expectedResolutionTime: string;
+  auditNote?: string;
+}
+
 export interface BeneficiaryApplicationItem {
   id: string;
   referenceNumber: string; // e.g. SHK-849201
@@ -50,7 +81,15 @@ export interface BeneficiaryApplicationItem {
   documentsReady: number;
   documentsList: DocumentAuditItem[];
   timeline: ApplicationTimelineEvent[];
+  // USP 2: Explain My Rejection Details
+  rejectionDetails?: RejectionDetails;
+  // USP 3: Grievance Escalation for Stalled Applications
+  expectedDecisionDays?: number;
+  daysInCurrentStage?: number;
+  isStalled?: boolean;
+  escalation?: ApplicationEscalation | null;
 }
+
 
 export interface BeneficiaryNotification {
   id: string;

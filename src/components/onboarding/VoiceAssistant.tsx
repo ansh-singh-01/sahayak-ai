@@ -39,7 +39,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
         ? 'कृपया अपना सामाजिक वर्ग बताएं: अनुसूचित जाति, अन्य पिछड़ा वर्ग, या सफाई कर्मचारी?' 
         : 'Please tell your community category: Scheduled Caste, Other Backward Class, or Safai Karamchari?',
       options: [
-        { label: isHindi ? 'अनुसूचित जाति (SC)' : 'Scheduled Caste (SC)', value: 'SC', keywords: ['sc', 'अनुसूचित जाति', 'दलित', 'जाति'] },
+        { label: isHindi ? 'अनुसूचित जाति / जनजाति (SC/ST)' : 'Scheduled Caste / Scheduled Tribe (SC/ST)', value: 'SC', keywords: ['sc', 'st', 'sc/st', 'अनुसूचित जाति', 'अनुसूचित जनजाति', 'दलित', 'आदिवासी', 'जाति'] },
         { label: isHindi ? 'अन्य पिछड़ा वर्ग (OBC)' : 'Other Backward Class (OBC)', value: 'OBC', keywords: ['obc', 'ओबीसी', 'पिछड़ा वर्ग', 'पिछड़े'] },
         { label: isHindi ? 'सफाई कर्मचारी / आश्रित' : 'Safai Karamchari / Dependent', value: 'SAFAI_KARAMCHARI', keywords: ['सफाई', 'कर्मचारी', 'वाल्मीकि', 'balmiki', 'safai'] },
         { label: isHindi ? 'सामान्य / अन्य' : 'Open / General', value: 'OPEN', keywords: ['general', 'सामान्य', 'open'] }

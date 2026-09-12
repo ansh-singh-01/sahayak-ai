@@ -131,7 +131,7 @@ Guardrail Verification: Zero numerical hallucination. All figures deterministica
           <div className="flex items-center space-x-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
             <span className="text-[11px] font-semibold">
-              PRD §27 Strict Guardrail: AI is restricted to plain-language phrasing and cites Rule IDs.
+              Statutory Guardrail: AI is grounded strictly in plain-language phrasing and citations to official Ministry rules.
             </span>
           </div>
 

@@ -34,8 +34,10 @@ const STAGES: { stage: ApplicationStage; label: string; hindiLabel: string }[] =
   { stage: 'DOCUMENTS_PENDING', label: 'Documents Pending', hindiLabel: 'दस्तावेज़ अपेक्षित' },
   { stage: 'SUBMITTED', label: 'Submitted', hindiLabel: 'प्रस्तुत' },
   { stage: 'UNDER_REVIEW', label: 'Under Review', hindiLabel: 'समीक्षाधीन' },
-  { stage: 'APPROVED', label: 'Approved', hindiLabel: 'स्वीकृत' }
+  { stage: 'APPROVED', label: 'Approved', hindiLabel: 'स्वीकृत' },
+  { stage: 'REJECTED', label: 'Not Approved (Explain)', hindiLabel: 'अस्वीकृत विवरण' }
 ];
+
 
 export const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = ({
   isOpen,

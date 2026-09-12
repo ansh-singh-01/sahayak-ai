@@ -131,17 +131,50 @@ export class ApiClient {
       return { status: 'ERROR', message: err.message || 'Login failed' };
     } catch (e) {
       console.warn('API login error, using fallback:', e);
+      const isPartner = payload.role === 'PARTNER';
+      const isMinistry = payload.role === 'MINISTRY';
+      const isBank = isPartner && (payload.identifier.toLowerCase().includes('sbi') || payload.identifier.toLowerCase().includes('bank'));
+      
+      let userName = payload.identifier.includes('@') ? payload.identifier.split('@')[0] : 'Citizen Beneficiary';
+      let agency = undefined;
+      let designation = undefined;
+      let partnerType: 'PSU_BANK' | 'SCA' | undefined = undefined;
+      let organizationName = undefined;
+
+      if (isMinistry) {
+        userName = 'Dr. Anand Verma, IAS';
+        agency = 'Ministry of Social Justice & Empowerment';
+        designation = 'Joint Secretary (Social Welfare & Credit)';
+      } else if (isBank) {
+        userName = 'Mr. Pradeep Joshi (State Bank of India)';
+        agency = 'State Bank of India — SME & Micro Credit Center';
+        designation = 'Chief Manager (Lead Bank Office)';
+        partnerType = 'PSU_BANK';
+        organizationName = 'State Bank of India';
+      } else if (isPartner) {
+        userName = 'Shri Arvind Verma (MP SCDC Nodal)';
+        agency = 'MP State SC/BC Development Corporation';
+        designation = 'Senior District Nodal Officer';
+        partnerType = 'SCA';
+        organizationName = 'MP State SC/BC Development Corporation';
+      }
+
       return {
         status: 'SUCCESS',
         message: 'Logged in successfully (local mode)',
         data: {
           user: {
             id: `USR-${Date.now().toString(36).toUpperCase()}`,
-            name: payload.identifier.includes('@') ? payload.identifier.split('@')[0] : 'Citizen Beneficiary',
+            name: userName,
+            email: payload.identifier.includes('@') ? payload.identifier : undefined,
             role: payload.role || 'CITIZEN',
             category: 'OBC',
             state: 'Madhya Pradesh',
             district: 'Indore',
+            agency,
+            designation,
+            partnerType,
+            organizationName,
             token: `LOCAL-TOKEN-${Date.now().toString(36).toUpperCase()}`,
             dpdpConsentTimestamp: new Date().toISOString()
           },
@@ -247,7 +280,7 @@ export class ApiClient {
 
       const user = restoredUser || {
         id: `USR-${Date.now().toString(36).toUpperCase()}`,
-        name: `Beneficiary (+91 ${phone.slice(-4)})`,
+        name: restoredUser?.name || '',
         phone,
         role: 'CITIZEN' as const,
         category: 'OBC' as const,
@@ -269,22 +302,56 @@ export class ApiClient {
   }
 
   /**
-   * Multilingual Conversational AI Chat with local fallback
+   * Multilingual Conversational AI Chat with dual-layer Gemini & local fallback
    */
   public static async sendChatMessage(message: string, history: any[], context: any) {
+    let activeKey = '';
     try {
+      const { GeminiClientService } = await import('./geminiClientService');
+      activeKey = GeminiClientService.getApiKey();
+    } catch {}
+
+    // 1. Try Backend REST API (/api/ai/chat)
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (activeKey) {
+        headers['x-gemini-api-key'] = activeKey;
+      }
+
       const res = await fetch(`${API_BASE_URL}/ai/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, history, context })
+        headers,
+        body: JSON.stringify({
+          message,
+          history,
+          context,
+          persona: context?.persona,
+          language: context?.language,
+          apiKey: activeKey
+        })
       });
       if (res.ok) {
         const json = await res.json();
-        return json.data;
+        if (json?.data?.text) {
+          return json.data;
+        }
       }
     } catch (e) {
-      console.warn('Backend chat endpoint unreachable, using local deterministic ChatbotService:', e);
+      console.info('Backend /api/ai/chat not directly reachable, attempting client Gemini API...');
     }
+
+    // 2. Direct browser-side Google Gemini call
+    try {
+      const { GeminiClientService } = await import('./geminiClientService');
+      const geminiReply = await GeminiClientService.generateChatReply(message, history, context);
+      if (geminiReply && geminiReply.text) {
+        return geminiReply;
+      }
+    } catch (geminiErr) {
+      console.warn('Direct Gemini call encountered error, using grounded local engine:', geminiErr);
+    }
+
+    // 3. Grounded local rule engine fallback
     const { ChatbotService } = await import('./chatbotService');
     return ChatbotService.processMessage(message, history, context);
   }

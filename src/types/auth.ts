@@ -1,6 +1,6 @@
 import { BeneficiaryCategory } from './scheme';
 
-export type UserRole = 'CITIZEN' | 'PARTNER' | 'MINISTRY';
+export type UserRole = 'CITIZEN' | 'FIELD_AGENT' | 'PARTNER' | 'MINISTRY';
 
 export interface AuthUser {
   id: string;
@@ -13,9 +13,14 @@ export interface AuthUser {
   district?: string;
   designation?: string;
   agency?: string;
+  agentId?: string; // CSC / VLE operator ID e.g. CSC-MP-IND-042
+  partnerType?: 'SCA' | 'RRB' | 'PSU_BANK' | 'COOPERATIVE_BANK' | 'BANK';
+  partnerId?: string;
+  organizationName?: string;
   token: string;
   dpdpConsentTimestamp: string;
 }
+
 
 export interface LoginPayload {
   identifier: string; // phone or email or officer ID
