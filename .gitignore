@@ -184,3 +184,12 @@ public/hitanshi_chouhan_qr.png
 .claude/
 *.code-workspace
 
+# ------------------------------------------------------------------------------
+# PRD & Product Requirement Documents
+# ------------------------------------------------------------------------------
+*PRD*.md
+*prd*.md
+docs/*PRD*.md
+docs/*prd*.md
+
+
