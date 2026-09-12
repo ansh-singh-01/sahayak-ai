@@ -194,5 +194,16 @@ docs/*prd*.md
 *business_model*.md
 SAHAYAK_business_model.md
 
+# ------------------------------------------------------------------------------
+# Presentation Generation & Export Scripts
+# ------------------------------------------------------------------------------
+scripts/generate_sih_presentation.py
+scripts/export_final_presentation.ps1
+scripts/export_template_slides.ps1
+scripts/export_winning_pdf.py
+scripts/export_*
+scripts/generate_*presentation*
+
+
 
 
